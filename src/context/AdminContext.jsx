@@ -1,0 +1,300 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { categories as defaultCategories, fabrics as defaultFabrics } from '../data/fabrics';
+import { db, FIREBASE_ENABLED } from '../firebase';
+import {
+  collection, doc, getDocs, setDoc, deleteDoc,
+  onSnapshot, orderBy, query, serverTimestamp
+} from 'firebase/firestore';
+
+const AdminContext = createContext();
+
+// ─── Collections Firestore ──────────────────────────────────────────────────
+const COL_TYPES    = 'fabric_types';
+const COL_FABRICS  = 'fabrics';
+const COL_ORDERS   = 'orders';
+const COL_SETTINGS = 'settings';
+
+// ─── Helpers localStorage (fallback) ────────────────────────────────────────
+const lsGet  = (key, fallback) => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
+const lsSet  = (key, val)      => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
+
+export const AdminProvider = ({ children }) => {
+
+  // ── Session ──────────────────────────────────────────────────────────────
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() =>
+    sessionStorage.getItem('admin_session') === 'true'
+  );
+
+  // ── Password ──────────────────────────────────────────────────────────────
+  const [adminPassword, setAdminPassword] = useState(() =>
+    localStorage.getItem('admin_password') || 'admin2024'
+  );
+
+  // ── Fabric Types / Categories ─────────────────────────────────────────────
+  const [fabricTypes, setFabricTypes] = useState(() =>
+    lsGet('fabric_types', defaultCategories.map((c, i) => ({ ...c, description: '', image: '', order: i, active: true })))
+  );
+
+  // ── Fabrics / Products ────────────────────────────────────────────────────
+  const [fabricsData, setFabricsData] = useState(() =>
+    lsGet('fabrics_data', defaultFabrics.map(f => ({ ...f, stock: 100, active: true })))
+  );
+
+  // ── Orders ────────────────────────────────────────────────────────────────
+  const [orders, setOrders] = useState(() => lsGet('orders', []));
+
+  // ── Firebase: chargement temps réel ─────────────────────────────────────
+  useEffect(() => {
+    if (!FIREBASE_ENABLED || !db) return;
+
+    // Charger le mot de passe admin depuis Firestore
+    const unsubSettings = onSnapshot(doc(db, COL_SETTINGS, 'admin'), snap => {
+      if (snap.exists()) {
+        const pwd = snap.data()?.password;
+        if (pwd) { setAdminPassword(pwd); localStorage.setItem('admin_password', pwd); }
+      }
+    });
+
+    // Écouter les catégories en temps réel
+    const unsubTypes = onSnapshot(
+      query(collection(db, COL_TYPES), orderBy('order', 'asc')),
+      snap => {
+        const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        setFabricTypes(data);
+        lsSet('fabric_types', data);
+      }
+    );
+
+    // Écouter les tissus en temps réel
+    const unsubFabrics = onSnapshot(
+      collection(db, COL_FABRICS),
+      snap => {
+        const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        setFabricsData(data);
+        lsSet('fabrics_data', data);
+      }
+    );
+
+    // Écouter les commandes en temps réel
+    const unsubOrders = onSnapshot(
+      query(collection(db, COL_ORDERS), orderBy('date', 'desc')),
+      snap => {
+        const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        setOrders(data);
+        lsSet('orders', data);
+      }
+    );
+
+    return () => {
+      unsubSettings();
+      unsubTypes();
+      unsubFabrics();
+      unsubOrders();
+    };
+  }, []);
+
+  // ── Persist localStorage (fallback si Firebase désactivé) ────────────────
+  useEffect(() => { if (!FIREBASE_ENABLED) lsSet('fabric_types', fabricTypes); }, [fabricTypes]);
+  useEffect(() => { if (!FIREBASE_ENABLED) lsSet('fabrics_data', fabricsData); }, [fabricsData]);
+  useEffect(() => { if (!FIREBASE_ENABLED) lsSet('orders', orders);            }, [orders]);
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const login = (password) => {
+    if (password === adminPassword) {
+      sessionStorage.setItem('admin_session', 'true');
+      setIsAdminLoggedIn(true);
+      return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    sessionStorage.removeItem('admin_session');
+    setIsAdminLoggedIn(false);
+  };
+
+  const changePassword = async (newPassword) => {
+    localStorage.setItem('admin_password', newPassword);
+    setAdminPassword(newPassword);
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_SETTINGS, 'admin'), { password: newPassword }, { merge: true });
+    }
+  };
+
+  // ── Fabric Types CRUD ─────────────────────────────────────────────────────
+  const addFabricType = async (typeData) => {
+    const id = `type-${Date.now()}`;
+    const newType = { ...typeData, id, order: fabricTypes.length, active: true };
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_TYPES, id), newType);
+    } else {
+      setFabricTypes(prev => [...prev, newType]);
+    }
+    return newType;
+  };
+
+  const updateFabricType = async (id, updates) => {
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_TYPES, id), updates, { merge: true });
+    } else {
+      setFabricTypes(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    }
+  };
+
+  const deleteFabricType = async (id) => {
+    if (FIREBASE_ENABLED && db) {
+      await deleteDoc(doc(db, COL_TYPES, id));
+    } else {
+      setFabricTypes(prev => prev.filter(t => t.id !== id));
+    }
+  };
+
+  const reorderFabricTypes = async (fromIndex, toIndex) => {
+    const arr = [...fabricTypes];
+    const [moved] = arr.splice(fromIndex, 1);
+    arr.splice(toIndex, 0, moved);
+    const reordered = arr.map((t, i) => ({ ...t, order: i }));
+    if (FIREBASE_ENABLED && db) {
+      await Promise.all(reordered.map(t => setDoc(doc(db, COL_TYPES, t.id), { order: t.order }, { merge: true })));
+    } else {
+      setFabricTypes(reordered);
+    }
+  };
+
+  // ── Fabrics CRUD ──────────────────────────────────────────────────────────
+  const addFabric = async (fabricData) => {
+    const id = String(Date.now());
+    const newFabric = { ...fabricData, id, stock: fabricData.stock ?? 100, active: true };
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_FABRICS, id), newFabric);
+    } else {
+      setFabricsData(prev => [...prev, newFabric]);
+    }
+    return newFabric;
+  };
+
+  const updateFabric = async (id, updates) => {
+    const sid = String(id);
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_FABRICS, sid), updates, { merge: true });
+    } else {
+      setFabricsData(prev => prev.map(f => String(f.id) === sid ? { ...f, ...updates } : f));
+    }
+  };
+
+  const deleteFabric = async (id) => {
+    const sid = String(id);
+    if (FIREBASE_ENABLED && db) {
+      await deleteDoc(doc(db, COL_FABRICS, sid));
+    } else {
+      setFabricsData(prev => prev.filter(f => String(f.id) !== sid));
+    }
+  };
+
+  // ── Orders ────────────────────────────────────────────────────────────────
+  const saveOrder = async (order) => {
+    const id = String(order.id || Date.now());
+    const orderWithId = { ...order, id, date: order.date || new Date().toISOString() };
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_ORDERS, id), orderWithId);
+    } else {
+      setOrders(prev => [orderWithId, ...prev]);
+    }
+    return orderWithId;
+  };
+
+  const updateOrderStatus = async (orderId, newStatus) => {
+    const sid = String(orderId);
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_ORDERS, sid), { status: newStatus }, { merge: true });
+    } else {
+      setOrders(prev => prev.map(o => String(o.id) === sid ? { ...o, status: newStatus } : o));
+    }
+  };
+
+  const deleteOrder = async (orderId) => {
+    const sid = String(orderId);
+    if (FIREBASE_ENABLED && db) {
+      await deleteDoc(doc(db, COL_ORDERS, sid));
+    } else {
+      setOrders(prev => prev.filter(o => String(o.id) !== sid));
+    }
+  };
+
+  // ── CSV Export ────────────────────────────────────────────────────────────
+  const exportOrdersCSV = (filteredOrders = orders) => {
+    const headers = [
+      'ID Commande', 'Date', 'Nom Client', 'Téléphone',
+      'Wilaya', 'Commune', 'Adresse', 'Type Livraison',
+      'Articles', 'Sous-total (DA)', 'Frais Livraison (DA)', 'Total (DA)', 'Statut'
+    ];
+
+    const rows = filteredOrders.map(o => {
+      const articles = o.items.map(item =>
+        `${item.fabric?.nameFr || item.fabric?.nameAr || 'Tissu'} x${item.length}m @ ${item.fabric?.price}DA`
+      ).join(' | ');
+
+      return [
+        o.id,
+        new Date(o.date).toLocaleString('fr-DZ'),
+        o.client?.fullName || '',
+        o.client?.phone || '',
+        o.client?.wilaya?.nameFr || '',
+        o.client?.commune || '',
+        o.client?.address || '',
+        o.deliveryType === 'home' ? 'Domicile' : 'Stop Desk',
+        articles,
+        o.subtotal?.toFixed(0) || '0',
+        o.shippingFee || '0',
+        o.total?.toFixed(0) || '0',
+        translateStatus(o.status),
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `commandes_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const translateStatus = (status) => {
+    const map = {
+      en_attente: 'En attente',
+      confirmee:  'Confirmée',
+      expediee:   'Expédiée',
+      livree:     'Livrée',
+      annulee:    'Annulée',
+    };
+    return map[status] || status;
+  };
+
+  return (
+    <AdminContext.Provider value={{
+      // Auth
+      isAdminLoggedIn, login, logout, changePassword, adminPassword,
+      // Fabric Types
+      fabricTypes, addFabricType, updateFabricType, deleteFabricType, reorderFabricTypes,
+      // Fabrics
+      fabricsData, addFabric, updateFabric, deleteFabric,
+      // Orders
+      orders, saveOrder, updateOrderStatus, deleteOrder, exportOrdersCSV,
+      translateStatus,
+    }}>
+      {children}
+    </AdminContext.Provider>
+  );
+};
+
+export const useAdmin = () => {
+  const context = useContext(AdminContext);
+  if (!context) throw new Error('useAdmin must be used within AdminProvider');
+  return context;
+};

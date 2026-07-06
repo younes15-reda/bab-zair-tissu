@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+@theme {
+  /* Terracotta color palette (Primary) */
+  --color-primary-50: #faf4f0;
+  --color-primary-100: #f4e5dd;
+  --color-primary-200: #ead0c4;
+  --color-primary-300: #dcb6a5;
+  --color-primary-400: #cd9780;
+  --color-primary-500: #bd7d64;
+  --color-primary-600: #c56e4e; /* Terracotta base */
+  --color-primary-700: #a6573a;
+  --color-primary-800: #864229;
+  --color-primary-900: #67301d;
+  --color-primary-950: #39180e;
+
+  /* Vert Sauge (Sage Green) color palette (mapped to gold for automated integration) */
+  --color-gold-50: #f4f6f3;
+  --color-gold-100: #e7ebe5;
+  --color-gold-200: #d2dad0;
+  --color-gold-300: #b9c6b6;
+  --color-gold-400: #9cb099;
+  --color-gold-500: #8e9e8c; /* Sage base */
+  --color-gold-600: #728370;
+  --color-gold-700: #5a6858;
+  --color-gold-800: #475246;
+  --color-gold-900: #394238;
+
+  /* Beige/Sand color palette */
+  --color-sand-50: #faf8f5; /* Blanc cassé */
+  --color-sand-100: #f4efe6; /* Soft Beige */
+  --color-sand-200: #e8ddc8;
+  --color-sand-300: #dbcaab;
+  --color-sand-400: #cbb18b;
+  --color-sand-500: #ba966f;
+  --color-sand-600: #a67f57;
+  --color-sand-700: #8b6642;
+  --color-sand-800: #6f5032;
+  --color-sand-950: #2c2b29; /* Contrast text slate */
+
+  --font-cairo: 'Cairo', 'Outfit', sans-serif;
+  --font-outfit: 'Outfit', 'Cairo', sans-serif;
+}
+
+@utility glass-header {
+  background: rgba(250, 248, 245, 0.85); /* off-white with transparency */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@utility text-stroke {
+  -webkit-text-stroke: 1px currentColor;
+}
+
+@layer base {
+  body {
+    font-family: 'Cairo', 'Outfit', sans-serif;
+    background-color: #faf8f5; /* Blanc cassé background */
+    color: #2c2b29; /* Contrast soft charcoal text */
+    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Set direction-specific font styling overrides */
+  html[dir="ltr"] body {
+    font-family: 'Outfit', 'Cairo', sans-serif;
+  }
+}
+
+/* Custom scrollbars for category listings */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f4efe6;
+}
+::-webkit-scrollbar-thumb {
+  background: #c56e4e; /* Terracotta thumb */
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #8e9e8c; /* Sage hover */
+}
+
+/* Fade in animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Admin Dashboard Styles ──────────────────────────────────────────────── */
+.admin-input {
+  background-color: rgb(15 23 42 / 0.5); /* slate-950/50 */
+  border: 1px solid rgb(51 65 85 / 1);   /* slate-600 */
+  border-radius: 0.75rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: 'Outfit', sans-serif;
+}
+
+.admin-input::placeholder {
+  color: rgb(100 116 139); /* slate-500 */
+}
+
+.admin-input:focus {
+  border-color: rgb(245 158 11 / 0.5); /* amber-500/50 */
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.1);
+}
+
+.admin-input option {
+  background-color: #1e293b; /* slate-800 */
+  color: #fff;
+}
+

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://bab-zair-tissu.dz/sitemap.xml
+
+# Disallow admin area from crawling
+Disallow: /admin
+Disallow: /admin-login
