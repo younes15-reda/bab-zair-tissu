@@ -133,7 +133,7 @@ export default function Checkout({ setCurrentPage }) {
     const whatsappUrl = `https://wa.me/${sellerWhatsAppNumber}?text=${encodedMessage}`;
 
     // Simulate order placement, clear cart and redirect
-    setTimeout(() => {
+    setTimeout(async () => {
       // ── Save order to localStorage for admin dashboard ──
       const order = {
         id: `CMD-${Date.now()}`,
@@ -152,7 +152,12 @@ export default function Checkout({ setCurrentPage }) {
         deliveryType,
         status: 'en_attente',
       };
-      saveOrder(order);
+      
+      try {
+        await saveOrder(order);
+      } catch (err) {
+        console.error("Erreur d'enregistrement de commande:", err);
+      }
 
       setLoading(false);
       setIsSuccess(true);
@@ -230,10 +235,21 @@ export default function Checkout({ setCurrentPage }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
       
+      {/* Back button */}
+      <button
+        onClick={() => setCurrentPage('cart')}
+        className="inline-flex items-center text-sm font-bold text-primary-600 hover:text-primary-700 transition-colors space-x-1.5 rtl:space-x-reverse"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={lang === 'ar' ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
+        </svg>
+        <span>{lang === 'ar' ? 'العودة للسلة' : 'Retour au panier'}</span>
+      </button>
+
       {/* Header */}
-      <div className="border-b border-sand-200 pb-5 mb-8 text-right rtl:text-right ltr:text-left">
+      <div className="border-b border-sand-200 pb-5 text-right rtl:text-right ltr:text-left">
         <h1 className="text-3xl font-extrabold text-sand-950 font-cairo">
           {t('checkout')}
         </h1>

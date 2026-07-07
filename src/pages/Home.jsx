@@ -3,10 +3,10 @@ import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 
 export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter }) {
-  const { t, lang, fabrics, categories } = useApp();
+  const { t, lang, fabrics, categories, getAssetUrl, homepageSettings } = useApp();
 
-  // Featured products using real user photos
-  const featuredFabrics = fabrics.filter(f => [1, 2, 7, 17].includes(f.id));
+  // Find 3 best fabrics for the home show-case
+  const featuredFabrics = fabrics.slice(0, 3);
 
   const handleCategoryClick = (catId) => {
     setShopFilter(catId);
@@ -85,7 +85,7 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
                 ].map((src, i) => (
                   <div key={i} className="w-20 h-20 rounded-xl overflow-hidden border-2 border-white shadow-md flex-shrink-0">
                     <img 
-                      src={src} 
+                      src={getAssetUrl(src)} 
                       alt={lang === 'ar' ? `قماش بالمتر معروض - صورة ${i + 1}` : `Tissu au mètre exposé - image ${i + 1}`} 
                       className="w-full h-full object-cover" 
                     />
@@ -105,7 +105,7 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
               
               <div className="relative w-full max-w-sm aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform hover:rotate-1 transition-transform duration-500">
                 <img
-                  src="/photo_9_2026-07-03_20-52-45.jpg"
+                  src={getAssetUrl(homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg')}
                   alt={lang === 'ar' ? 'محل أقمشة وسكاي باب زير 2 تلمسان - واجهة الأقمشة' : 'Boutique Le Tissu Bab Zir 2 Tlemcen - Rouleaux de tissus'}
                   className="w-full h-full object-cover"
                 />
@@ -168,7 +168,7 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
                 {lang === 'ar' ? '+9800 زبون راضٍ' : '+9800 clients satisfaits'}
               </h4>
               <p className="text-xs text-sand-500 mt-1">
-                {lang === 'ar' ? 'ثقتكم هي سر نجاحنا واستمراريتنا' : 'Votre confiance est notre plus grande réussite'}
+                {lang === 'ar' ? 'ثقتكم هي سر نجاحنا واستمراريتنا' : 'Votre confiance est notre plus grand succès'}
               </p>
             </div>
           </div>
@@ -246,47 +246,83 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredFabrics.map((fabric) => (
-            <ProductCard
-              key={fabric.id}
-              fabric={fabric}
-              onSelect={handleSelectProduct}
-            />
-          ))}
-        </div>
+        {/* Produit vedette choisi par l'admin + autres produits */}
+        {(() => {
+          const featuredId = homepageSettings?.featuredProductId;
+          const featuredProduct = featuredId ? fabrics.find(f => String(f.id) === String(featuredId)) : null;
+          const otherProducts = featuredProduct
+            ? fabrics.filter(f => String(f.id) !== String(featuredId)).slice(0, 3)
+            : fabrics.slice(0, 3);
+          const displayList = featuredProduct ? [featuredProduct, ...otherProducts] : otherProducts;
+          return (
+            <div className="space-y-4">
+              {featuredProduct && (
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold-100 text-gold-800 text-xs font-bold rounded-full border border-gold-200">
+                    ⭐ {lang === 'ar' ? 'المنتج المميز' : 'Produit Vedette'}
+                  </span>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {displayList.map((fabric, idx) => (
+                  <div key={fabric.id} className={idx === 0 && featuredProduct ? 'relative' : ''}>
+                    {idx === 0 && featuredProduct && (
+                      <div className="absolute -top-2 -left-2 z-10 w-6 h-6 bg-gold-500 rounded-full flex items-center justify-center shadow-md">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </div>
+                    )}
+                    <ProductCard
+                      fabric={fabric}
+                      onSelect={handleSelectProduct}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </section>
 
-      {/* ─── Gallery Strip (real store photos) ───────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="space-y-5">
-          <h2 className="text-xl font-extrabold text-sand-950 font-cairo text-center">
-            {lang === 'ar' ? 'معرض صور المحل — تلمسان باب زير 2' : 'Galerie du Magasin — Tlemcen Bab Zir 2'}
-          </h2>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
-            {[
-              '/photo_20_2026-07-03_20-52-45.jpg',
-              '/photo_21_2026-07-03_20-52-45.jpg',
-              '/photo_22_2026-07-03_20-52-45.jpg',
-              '/photo_23_2026-07-03_20-52-45.jpg',
-              '/photo_24_2026-07-03_20-52-45.jpg',
-              '/photo_25_2026-07-03_20-52-45.jpg',
-            ].map((src, i) => (
-              <div
-                key={i}
-                className="aspect-square rounded-xl overflow-hidden border border-sand-200 shadow-sm hover:scale-105 transition-transform duration-300 cursor-pointer"
-                onClick={() => handleCategoryClick('all')}
-              >
-                <img 
-                  src={src} 
-                  alt={lang === 'ar' ? `قماش بالمتر من متجر تلمسان - معرض صورة ${i + 1}` : `Tissu au mètre de notre magasin - galerie photo ${i + 1}`} 
-                  className="w-full h-full object-cover" 
-                />
+      {/* ─── Gallery Strip (dynamique via admin) ───────────────────── */}
+      {(() => {
+        const defaultGallery = [
+          '/photo_20_2026-07-03_20-52-45.jpg',
+          '/photo_21_2026-07-03_20-52-45.jpg',
+          '/photo_22_2026-07-03_20-52-45.jpg',
+          '/photo_23_2026-07-03_20-52-45.jpg',
+          '/photo_24_2026-07-03_20-52-45.jpg',
+          '/photo_25_2026-07-03_20-52-45.jpg',
+        ];
+        const gallery = (homepageSettings?.galleryImages && homepageSettings.galleryImages.length > 0)
+          ? homepageSettings.galleryImages
+          : defaultGallery;
+        return (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="space-y-5">
+              <h2 className="text-xl font-extrabold text-sand-950 font-cairo text-center">
+                {lang === 'ar' ? 'معرض صور المحل — تلمسان باب زير 2' : 'Galerie du Magasin — Tlemcen Bab Zir 2'}
+              </h2>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                {gallery.map((src, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square rounded-xl overflow-hidden border border-sand-200 shadow-sm hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    onClick={() => handleCategoryClick('all')}
+                  >
+                    <img 
+                      src={src.startsWith('data:') ? src : getAssetUrl(src)} 
+                      alt={lang === 'ar' ? `قماش بالمتر من متجر تلمسان - معرض صورة ${i + 1}` : `Tissu au mètre de notre magasin - galerie photo ${i + 1}`} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ─── "Minimum 0.5m" selling pitch ───────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

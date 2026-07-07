@@ -3,13 +3,20 @@ import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
 
 export default function ProductDetail({ fabric, setCurrentPage, setSelectedProduct }) {
-  const { lang, t, addToCart, fabrics, categories } = useApp();
+  const { lang, t, addToCart, fabrics, categories, getAssetUrl } = useApp();
   const [length, setLength] = useState(1.0); // Default to 1.0 meter
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState(false);
   
   // Gallery active image state
   const [activeImage, setActiveImage] = useState(fabric?.image);
+
+  // Sync activeImage when product changes
+  React.useEffect(() => {
+    if (fabric) {
+      setActiveImage(fabric.image);
+    }
+  }, [fabric]);
 
   if (!fabric) {
     return (
@@ -123,7 +130,7 @@ export default function ProductDetail({ fabric, setCurrentPage, setSelectedProdu
           <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-sand-50 border border-sand-200 relative flex items-center justify-center shadow-inner">
             {activeImage ? (
               <img
-                src={activeImage}
+                src={getAssetUrl(activeImage)}
                 alt={name}
                 className="object-cover w-full h-full transition-all duration-300"
               />
@@ -152,7 +159,7 @@ export default function ProductDetail({ fabric, setCurrentPage, setSelectedProdu
               }`}
             >
               <img 
-                src={fabric.image} 
+                src={getAssetUrl(fabric.image)} 
                 alt={lang === 'ar' ? `رول قماش بالمتر - ${name}` : `Rouleau de tissu au mètre - ${name}`} 
                 className="w-full h-full object-cover" 
               />
@@ -167,7 +174,7 @@ export default function ProductDetail({ fabric, setCurrentPage, setSelectedProdu
                 }`}
               >
                 <img 
-                  src={fabric.imageTexture} 
+                  src={getAssetUrl(fabric.imageTexture)} 
                   alt={lang === 'ar' ? `تفاصيل قوام القماش - ${name}` : `Texture zoomée du tissu - ${name}`} 
                   className="w-full h-full object-cover" 
                 />
@@ -186,7 +193,7 @@ export default function ProductDetail({ fabric, setCurrentPage, setSelectedProdu
                 }`}
               >
                 <img 
-                  src={fabric.imageInspiration} 
+                  src={getAssetUrl(fabric.imageInspiration)} 
                   alt={lang === 'ar' ? `شكل القماش مخيط على السرير - ${name}` : `Rendu inspirant après couture - ${name}`} 
                   className="w-full h-full object-cover" 
                 />

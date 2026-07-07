@@ -32,6 +32,11 @@ function MainApp() {
     }
   }, [currentPage, isAdminLoggedIn]);
 
+  // Défilement automatique vers le haut au changement de page
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentPage, selectedProduct]);
+
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
@@ -56,6 +61,7 @@ function MainApp() {
           <ProductDetail
             fabric={selectedProduct}
             setCurrentPage={setCurrentPage}
+            setSelectedProduct={setSelectedProduct}
           />
         );
       case 'cart':
@@ -81,7 +87,7 @@ function MainApp() {
         );
       case 'contact':
         return (
-          <Contact />
+          <Contact setCurrentPage={setCurrentPage} />
         );
       default:
         return (

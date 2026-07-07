@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function ProductCard({ fabric, onSelect }) {
-  const { lang, t, categories } = useApp();
+  const { lang, t, categories, getAssetUrl } = useApp();
 
   const name = lang === 'ar' ? fabric.nameAr : fabric.nameFr;
   const desc = lang === 'ar' ? fabric.descriptionAr : fabric.descriptionFr;
@@ -21,7 +21,7 @@ export default function ProductCard({ fabric, onSelect }) {
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-sand-100 flex items-center justify-center">
         {fabric.image ? (
           <img
-            src={fabric.image}
+            src={getAssetUrl(fabric.image)}
             alt={name}
             className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
           />

@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Footer({ setCurrentPage }) {
-  const { t, lang } = useApp();
+  const { t, lang, getAssetUrl } = useApp();
 
   return (
     <footer className="bg-sand-950 text-sand-200 border-t border-sand-900 pt-16 pb-8 transition-colors duration-200">
@@ -13,7 +13,7 @@ export default function Footer({ setCurrentPage }) {
           <div className="space-y-4">
             <div className="flex items-center space-x-3 rtl:space-x-reverse">
               <img
-                src="/logo.jpg"
+                src={getAssetUrl('/logo.jpg')}
                 alt="Logo"
                 className="w-10 h-10 rounded-full border border-sand-800 object-cover"
                 onError={(e) => {
@@ -30,7 +30,7 @@ export default function Footer({ setCurrentPage }) {
             <div className="flex space-x-4 rtl:space-x-reverse pt-2">
               {/* Facebook Icon */}
               <a
-                href="https://www.facebook.com"
+                href="https://www.facebook.com/share/1RJXRMM2TE/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-sand-900 flex items-center justify-center text-sand-400 hover:bg-gold-500 hover:text-white transition-all duration-300"

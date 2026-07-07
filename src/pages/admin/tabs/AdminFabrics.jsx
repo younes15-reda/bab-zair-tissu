@@ -8,8 +8,33 @@ const MOTIF_LABELS = {
   'adult': 'Adulte (الكبار)',
 };
 
+// ─── Compression d'image automatique ─────────────────────────────────────────
+// Redimensionne et compresse l'image côté client pour rester sous 200KB en Base64
+const compressImage = (file, maxWidth = 800, quality = 0.72) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function FabricModal({ initial, fabricTypes, onSave, onClose }) {
+function FabricModal({ initial, fabricTypes, onSave, onClose, isSaving }) {
   const [form, setForm] = useState({
     nameAr: initial?.nameAr || '',
     nameFr: initial?.nameFr || '',
@@ -54,8 +79,8 @@ function FabricModal({ initial, fabricTypes, onSave, onClose }) {
           </div>
         </div>
 
-        {/* Category + Price + Stock */}
-        <div className="grid grid-cols-3 gap-4">
+        {/* Category + Price */}
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400">Catégorie *</label>
             <select value={form.category} onChange={e => set('category', e.target.value)} className="admin-input w-full">
@@ -65,10 +90,6 @@ function FabricModal({ initial, fabricTypes, onSave, onClose }) {
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400">Prix/mètre (DA) *</label>
             <input type="number" min="0" value={form.price} onChange={e => set('price', parseFloat(e.target.value))} placeholder="350" className="admin-input w-full" />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400">Stock (mètres)</label>
-            <input type="number" min="0" step="0.5" value={form.stock} onChange={e => set('stock', parseFloat(e.target.value))} className="admin-input w-full" />
           </div>
         </div>
 
@@ -125,14 +146,18 @@ function FabricModal({ initial, fabricTypes, onSave, onClose }) {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          set(field, event.target.result);
-                        };
-                        reader.readAsDataURL(file);
+                        try {
+                          const compressed = await compressImage(file);
+                          set(field, compressed);
+                        } catch {
+                          // Fallback: lecture directe si Canvas échoue
+                          const reader = new FileReader();
+                          reader.onload = (ev) => set(field, ev.target.result);
+                          reader.readAsDataURL(file);
+                        }
                       }
                     }}
                   />
@@ -196,11 +221,21 @@ function FabricModal({ initial, fabricTypes, onSave, onClose }) {
 
         {/* Buttons */}
         <div className="flex gap-3 pt-2">
-          <button onClick={onClose} className="flex-1 py-3 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors">Annuler</button>
-          <button onClick={() => { if (isValid) { onSave(form); onClose(); } }}
-            disabled={!isValid}
-            className="flex-1 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl text-sm font-black transition-colors">
-            {initial ? 'Enregistrer' : 'Créer le tissu'}
+          <button onClick={onClose} disabled={isSaving} className="flex-1 py-3 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-colors disabled:opacity-50">Annuler</button>
+          <button onClick={() => { if (isValid) { onSave(form); } }}
+            disabled={!isValid || isSaving}
+            className="flex-grow py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl text-sm font-black transition-colors flex items-center justify-center gap-2">
+            {isSaving ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Enregistrement...</span>
+              </>
+            ) : (
+              <span>{initial ? 'Enregistrer' : 'Créer le tissu'}</span>
+            )}
           </button>
         </div>
       </div>
@@ -217,6 +252,8 @@ export default function AdminFabrics() {
   const [editingFabric, setEditingFabric] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const filtered = fabricsData.filter(f => {
     const matchCat = filterCategory === 'all' || f.category === filterCategory;
     const q = search.toLowerCase();
@@ -224,13 +261,22 @@ export default function AdminFabrics() {
     return matchCat && matchSearch;
   });
 
-  const handleSave = (formData) => {
-    if (editingFabric) {
-      updateFabric(editingFabric.id, formData);
-    } else {
-      addFabric(formData);
+  const handleSave = async (formData) => {
+    setIsSaving(true);
+    try {
+      if (editingFabric) {
+        await updateFabric(editingFabric.id, formData);
+      } else {
+        await addFabric(formData);
+      }
+      setEditingFabric(null);
+      setShowModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la sauvegarde du tissu dans Firebase. Vérifiez la taille des photos.");
+    } finally {
+      setIsSaving(false);
     }
-    setEditingFabric(null);
   };
 
   const getCategoryName = (catId) => {
@@ -277,7 +323,7 @@ export default function AdminFabrics() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left border-b border-slate-700/50">
-              {['Image', 'Nom', 'Catégorie', 'Prix/m', 'Stock', 'Statut', 'Actions'].map(h => (
+              {['Image', 'Nom', 'Catégorie', 'Prix/m', 'Statut', 'Actions'].map(h => (
                 <th key={h} className="pb-3 pr-4 text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -307,22 +353,13 @@ export default function AdminFabrics() {
                   <span className="text-amber-400 font-black">{fabric.price} DA</span>
                 </td>
                 <td className="py-3 pr-4">
-                  <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
-                    (fabric.stock ?? 0) < 5 ? 'bg-red-500/20 text-red-400' :
-                    (fabric.stock ?? 0) < 20 ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-emerald-500/20 text-emerald-400'
-                  }`}>
-                    {fabric.stock ?? '?'} m
-                  </span>
-                </td>
-                <td className="py-3 pr-4">
                   <button onClick={() => updateFabric(fabric.id, { active: !fabric.active })}
                     className={`relative w-9 h-5 rounded-full transition-colors ${fabric.active !== false ? 'bg-emerald-500' : 'bg-slate-600'}`}>
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${fabric.active !== false ? 'translate-x-4' : 'translate-x-0'}`} />
                   </button>
                 </td>
                 <td className="py-3">
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                     <button onClick={() => { setEditingFabric(fabric); setShowModal(true); }}
                       className="text-xs px-2.5 py-1.5 bg-slate-700 hover:bg-amber-500/20 hover:text-amber-300 text-slate-300 rounded-lg transition-colors font-bold">
                       ✏️
@@ -353,6 +390,7 @@ export default function AdminFabrics() {
           fabricTypes={fabricTypes}
           onSave={handleSave}
           onClose={() => { setShowModal(false); setEditingFabric(null); }}
+          isSaving={isSaving}
         />
       )}
 

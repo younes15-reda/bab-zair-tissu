@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
-export default function Contact() {
+export default function Contact({ setCurrentPage }) {
   const { lang, t } = useApp();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,11 +12,23 @@ export default function Contact() {
     e.preventDefault();
     if (!name.trim() || !message.trim()) return;
 
-    // Simulate sending message
+    const sellerWhatsAppNumber = "213554283264";
+    let text = `✉️ *Nouveau message de contact (Site Web)* ✉️\n\n`;
+    text += `👤 *Nom :* ${name}\n`;
+    if (email.trim()) {
+      text += `📧 *E-mail :* ${email}\n`;
+    }
+    text += `\n💬 *Message :*\n${message}`;
+
+    const encoded = encodeURIComponent(text);
+    const whatsappUrl = `https://wa.me/${sellerWhatsAppNumber}?text=${encoded}`;
+
     setIsSuccess(true);
     setName('');
     setEmail('');
     setMessage('');
+    
+    window.open(whatsappUrl, '_blank');
     
     setTimeout(() => {
       setIsSuccess(false);
@@ -24,8 +36,19 @@ export default function Contact() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
+      {/* Back button */}
+      <button
+        onClick={() => setCurrentPage('home')}
+        className="inline-flex items-center text-sm font-bold text-primary-600 hover:text-primary-700 transition-colors space-x-1.5 rtl:space-x-reverse"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={lang === 'ar' ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
+        </svg>
+        <span>{lang === 'ar' ? 'العودة للرئيسية' : 'Retour à l\'accueil'}</span>
+      </button>
+
       {/* Page Header */}
       <div className="text-center space-y-3">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-sand-950 font-cairo">

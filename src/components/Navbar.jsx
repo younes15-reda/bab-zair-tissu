@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar({ currentPage, setCurrentPage }) {
-  const { lang, toggleLanguage, t, cart } = useApp();
+  const { lang, cart, toggleLanguage, getAssetUrl, t } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const cartItemsCount = cart.length;
+  const cartItemsCount = cart.reduce((sum, item) => sum + 1, 0);
 
   const navLinks = [
     { id: 'home', label: t('home') },
@@ -27,18 +27,18 @@ export default function Navbar({ currentPage, setCurrentPage }) {
           <div className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer" onClick={() => handleNavClick('home')}>
             {/* Real Store Logo image from public folder */}
             <img
-              src="/logo.jpg"
+              src={getAssetUrl('/logo.jpg')}
               alt="Logo"
               className="w-12 h-12 rounded-full border border-sand-200 shadow-sm object-cover"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}
             />
-            <div className="flex flex-col">
-              <span className="text-lg sm:text-xl font-bold tracking-tight text-sand-950 font-cairo leading-tight">
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm sm:text-lg font-bold tracking-tight text-sand-950 font-cairo leading-tight truncate max-w-[150px] sm:max-w-none">
                 {lang === 'ar' ? 'اقمشة وسكاي باب زير 2' : 'Le Tissu Bab Zir 2'}
               </span>
-              <span className="text-[10px] text-primary-600 font-extrabold tracking-wider rtl:text-right">
+              <span className="text-[9px] sm:text-[10px] text-primary-600 font-extrabold tracking-wider rtl:text-right">
                 {lang === 'ar' ? 'القماش - تلمسان' : 'Le Tissu - Tlemcen'}
               </span>
             </div>

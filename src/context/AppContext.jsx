@@ -147,7 +147,7 @@ const translations = {
 };
 
 export const AppProvider = ({ children }) => {
-  const { fabricsData, fabricTypes } = useAdmin();
+  const { fabricsData, fabricTypes, saveOrder: saveOrderFirestore, homepageSettings } = useAdmin();
 
   // Filter out inactive products and categories for the public shop
   const fabrics = fabricsData.filter(f => f.active !== false);
@@ -232,10 +232,23 @@ export const AppProvider = ({ children }) => {
     setCart([]);
   };
 
-  // Save order to localStorage (via AdminContext)
-  const saveOrder = (order) => {
-    const existing = JSON.parse(localStorage.getItem('orders') || '[]');
-    localStorage.setItem('orders', JSON.stringify([order, ...existing]));
+  // Save order to Firestore (via AdminContext)
+  const saveOrder = async (order) => {
+    if (saveOrderFirestore) {
+      await saveOrderFirestore(order);
+    }
+  };
+
+  // Helper to dynamically adjust asset paths for GitHub Pages subfolder
+  const getAssetUrl = (path) => {
+    if (!path) return '';
+    // If it's already a full URL or base64 data, return it as is
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+      return path;
+    }
+    // Remove leading slash if any to build clean relative path
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    return `${import.meta.env.BASE_URL}${cleanPath}`;
   };
 
   return (
@@ -253,6 +266,8 @@ export const AppProvider = ({ children }) => {
         saveOrder,
         fabrics,
         categories,
+        getAssetUrl,
+        homepageSettings,
       }}
     >
       {children}

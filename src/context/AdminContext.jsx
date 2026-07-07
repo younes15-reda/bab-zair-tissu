@@ -43,6 +43,22 @@ export const AdminProvider = ({ children }) => {
   // ── Orders ────────────────────────────────────────────────────────────────
   const [orders, setOrders] = useState(() => lsGet('orders', []));
 
+  // ── Homepage Settings ─────────────────────────────────────────────────────
+  const [homepageSettings, setHomepageSettings] = useState(() =>
+    lsGet('homepage_settings', { 
+      heroImage: '/photo_9_2026-07-03_20-52-45.jpg',
+      featuredProductId: '1', // produit vedette par défaut
+      galleryImages: [
+        '/photo_20_2026-07-03_20-52-45.jpg',
+        '/photo_21_2026-07-03_20-52-45.jpg',
+        '/photo_22_2026-07-03_20-52-45.jpg',
+        '/photo_23_2026-07-03_20-52-45.jpg',
+        '/photo_24_2026-07-03_20-52-45.jpg',
+        '/photo_25_2026-07-03_20-52-45.jpg',
+      ]
+    })
+  );
+
   // ── Firebase: chargement temps réel ─────────────────────────────────────
   useEffect(() => {
     if (!FIREBASE_ENABLED || !db) return;
@@ -85,11 +101,21 @@ export const AdminProvider = ({ children }) => {
       }
     );
 
+    // Écouter les configurations de l'accueil
+    const unsubHomepage = onSnapshot(doc(db, COL_SETTINGS, 'homepage'), snap => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setHomepageSettings(data);
+        lsSet('homepage_settings', data);
+      }
+    });
+
     return () => {
       unsubSettings();
       unsubTypes();
       unsubFabrics();
       unsubOrders();
+      unsubHomepage();
     };
   }, []);
 
@@ -97,6 +123,7 @@ export const AdminProvider = ({ children }) => {
   useEffect(() => { if (!FIREBASE_ENABLED) lsSet('fabric_types', fabricTypes); }, [fabricTypes]);
   useEffect(() => { if (!FIREBASE_ENABLED) lsSet('fabrics_data', fabricsData); }, [fabricsData]);
   useEffect(() => { if (!FIREBASE_ENABLED) lsSet('orders', orders);            }, [orders]);
+  useEffect(() => { if (!FIREBASE_ENABLED) lsSet('homepage_settings', homepageSettings); }, [homepageSettings]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   const login = (password) => {
@@ -118,6 +145,15 @@ export const AdminProvider = ({ children }) => {
     setAdminPassword(newPassword);
     if (FIREBASE_ENABLED && db) {
       await setDoc(doc(db, COL_SETTINGS, 'admin'), { password: newPassword }, { merge: true });
+    }
+  };
+
+  const updateHomepageSettings = async (updates) => {
+    const newSettings = { ...homepageSettings, ...updates };
+    setHomepageSettings(newSettings);
+    lsSet('homepage_settings', newSettings);
+    if (FIREBASE_ENABLED && db) {
+      await setDoc(doc(db, COL_SETTINGS, 'homepage'), updates, { merge: true });
     }
   };
 
@@ -287,6 +323,8 @@ export const AdminProvider = ({ children }) => {
       // Orders
       orders, saveOrder, updateOrderStatus, deleteOrder, exportOrdersCSV,
       translateStatus,
+      // Homepage Settings
+      homepageSettings, updateHomepageSettings,
     }}>
       {children}
     </AdminContext.Provider>

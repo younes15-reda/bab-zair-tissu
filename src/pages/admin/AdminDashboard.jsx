@@ -11,27 +11,117 @@ const TABS = [
   { id: 'settings',     label: 'Paramètres',     icon: '⚙️', short: 'SET' },
 ];
 
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
+// ─── Compression d'image d'accueil ──────────────────────────────────────────
+const compressImage = (file, maxWidth = 600, quality = 0.6) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
+// ─── Settings Tab ─────────────────────────────────────────────────────────────────────────────────
 function AdminSettings() {
-  const { adminPassword, changePassword, logout, orders } = useAdmin();
+  const { adminPassword, changePassword, logout, orders, homepageSettings, updateHomepageSettings, fabricsData } = useAdmin();
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [msg, setMsg] = useState({ text: '', type: '' });
+  const [galleryMsg, setGalleryMsg] = useState('');
+
+  const showMsg = (text, type = 'success') => {
+    setMsg({ text, type });
+    setTimeout(() => setMsg({ text: '', type: '' }), 4000);
+  };
 
   const handleChangePass = () => {
-    if (oldPass !== adminPassword) { setMsg({ text: 'Ancien mot de passe incorrect.', type: 'error' }); return; }
-    if (newPass.length < 6) { setMsg({ text: 'Le nouveau mot de passe doit avoir au moins 6 caractères.', type: 'error' }); return; }
-    if (newPass !== confirmPass) { setMsg({ text: 'Les mots de passe ne correspondent pas.', type: 'error' }); return; }
+    if (oldPass !== adminPassword) { showMsg('Ancien mot de passe incorrect.', 'error'); return; }
+    if (newPass.length < 6) { showMsg('Le nouveau mot de passe doit avoir au moins 6 caractères.', 'error'); return; }
+    if (newPass !== confirmPass) { showMsg('Les mots de passe ne correspondent pas.', 'error'); return; }
     changePassword(newPass);
     setOldPass(''); setNewPass(''); setConfirmPass('');
-    setMsg({ text: '✅ Mot de passe modifié avec succès.', type: 'success' });
-    setTimeout(() => setMsg({ text: '', type: '' }), 4000);
+    showMsg('✅ Mot de passe modifié avec succès.');
   };
 
   const totalRevenue = orders
     .filter(o => o.status !== 'annulee')
     .reduce((sum, o) => sum + (o.total || 0), 0);
+
+  // Produits actifs disponibles pour le choix du produit vedette
+  const activeProducts = (fabricsData || []).filter(f => f.active !== false);
+  const featuredProductId = homepageSettings?.featuredProductId || '';
+  const featuredProduct = activeProducts.find(f => String(f.id) === String(featuredProductId));
+
+  // Galerie actuelle
+  const currentGallery = homepageSettings?.galleryImages || [];
+
+  const handleSelectFeatured = async (productId) => {
+    await updateHomepageSettings({ featuredProductId: productId });
+    showMsg('✅ Produit vedette mis à jour.');
+  };
+
+  const handleAddGalleryImages = async (files) => {
+    if (!files || files.length === 0) return;
+    const MAX = 6;
+    const remaining = MAX - currentGallery.length;
+    if (remaining <= 0) {
+      setGalleryMsg('⚠️ Maximum 6 photos atteint. Supprimez une photo d\'abord.');
+      setTimeout(() => setGalleryMsg(''), 3500);
+      return;
+    }
+    const toProcess = Array.from(files).slice(0, remaining);
+    const compressed = [];
+    for (const file of toProcess) {
+      try {
+        const b64 = await compressImage(file, 500, 0.55);
+        compressed.push(b64);
+      } catch (e) {
+        console.error('Compression err:', e);
+      }
+    }
+    if (compressed.length > 0) {
+      const newGallery = [...currentGallery, ...compressed];
+      await updateHomepageSettings({ galleryImages: newGallery });
+      setGalleryMsg(`✅ ${compressed.length} photo(s) ajoutée(s) à la galerie.`);
+      setTimeout(() => setGalleryMsg(''), 3500);
+    }
+  };
+
+  const handleRemoveGalleryImage = async (index) => {
+    const newGallery = currentGallery.filter((_, i) => i !== index);
+    await updateHomepageSettings({ galleryImages: newGallery });
+    setGalleryMsg('✅ Photo supprimée.');
+    setTimeout(() => setGalleryMsg(''), 2500);
+  };
+
+  const handleResetGallery = async () => {
+    const defaultGallery = [
+      '/photo_20_2026-07-03_20-52-45.jpg',
+      '/photo_21_2026-07-03_20-52-45.jpg',
+      '/photo_22_2026-07-03_20-52-45.jpg',
+      '/photo_23_2026-07-03_20-52-45.jpg',
+      '/photo_24_2026-07-03_20-52-45.jpg',
+      '/photo_25_2026-07-03_20-52-45.jpg',
+    ];
+    await updateHomepageSettings({ galleryImages: defaultGallery });
+    setGalleryMsg('✅ Galerie réinitialisée aux photos originales.');
+    setTimeout(() => setGalleryMsg(''), 3500);
+  };
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -70,6 +160,176 @@ function AdminSettings() {
           className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl transition-colors text-sm">
           Modifier le mot de passe
         </button>
+      </div>
+
+      {/* Configuration page d'accueil */}
+      <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+        <h3 className="text-white font-bold">Image principale d'accueil (Hero)</h3>
+        <p className="text-slate-400 text-xs leading-relaxed">
+          Cette image s'affiche sur la droite de la page d'accueil des visiteurs. Elle doit être attractive.
+        </p>
+        
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-28 rounded-xl overflow-hidden bg-slate-900 border border-slate-700 shrink-0">
+            <img 
+              src={homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg'} 
+              alt="Accueil" 
+              className="w-full h-full object-cover" 
+              onError={e => e.target.style.display='none'}
+            />
+          </div>
+          <div className="flex-grow space-y-2">
+            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl transition-all border border-slate-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Changer la photo d'accueil</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    try {
+                      const compressed = await compressImage(file);
+                      await updateHomepageSettings({ heroImage: compressed });
+                      showMsg('✅ Photo d\'accueil mise à jour avec succès.');
+                    } catch (err) {
+                      showMsg('Erreur lors de la compression de la photo.', 'error');
+                    }
+                  }
+                }}
+              />
+            </label>
+            <p className="text-[10px] text-slate-500 font-medium">Format conseillé: vertical (4:5)</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Produit Vedette */}
+      <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+        <div>
+          <h3 className="text-white font-bold">⭐ Produit Vedette (Page d'accueil)</h3>
+          <p className="text-slate-400 text-xs leading-relaxed mt-1">
+            Le produit sélectionné s'affichera en premier dans la section "Sélection Vedette" avec un badge distinctif. Les visiteurs pourront cliquer dessus pour voir ses détails.
+          </p>
+        </div>
+
+        {/* Aperçu du produit vedette actuel */}
+        {featuredProduct && (
+          <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+            <div className="w-12 h-14 rounded-lg overflow-hidden bg-slate-900 border border-slate-700 shrink-0">
+              <img
+                src={featuredProduct.image || ''}
+                alt={featuredProduct.nameFr || ''}
+                className="w-full h-full object-cover"
+                onError={e => e.target.style.display='none'}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-amber-300 font-bold text-xs truncate">{featuredProduct.nameFr || featuredProduct.nameAr}</p>
+              <p className="text-slate-400 text-[10px] mt-0.5">{featuredProduct.pricePerMeter} DA/m</p>
+            </div>
+            <span className="text-amber-400 text-lg">⭐</span>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-400">Sélectionner le produit vedette</label>
+          <select
+            value={featuredProductId}
+            onChange={e => handleSelectFeatured(e.target.value)}
+            className="admin-input w-full"
+          >
+            <option value="">-- Aucun produit vedette --</option>
+            {activeProducts.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.nameFr || p.nameAr} — {p.pricePerMeter} DA/m
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Galerie du Magasin */}
+      <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+        <div>
+          <h3 className="text-white font-bold">🖼️ Galerie du Magasin</h3>
+          <p className="text-slate-400 text-xs leading-relaxed mt-1">
+            Ces photos s'affichent dans la section galerie en bas de la page d'accueil. Maximum 6 photos.
+          </p>
+        </div>
+
+        {galleryMsg && (
+          <p className={`text-xs font-bold ${galleryMsg.startsWith('⚠️') ? 'text-amber-400' : 'text-emerald-400'}`}>{galleryMsg}</p>
+        )}
+
+        {/* Grid des photos actuelles */}
+        <div className="grid grid-cols-3 gap-2">
+          {currentGallery.map((src, idx) => (
+            <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-900">
+              <img
+                src={src.startsWith('data:') ? src : src}
+                alt={`Galerie ${idx + 1}`}
+                className="w-full h-full object-cover"
+              />
+              <button
+                onClick={() => handleRemoveGalleryImage(idx)}
+                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <span className="absolute bottom-1 left-1 text-[9px] font-bold bg-black/60 text-white px-1 rounded">{idx + 1}</span>
+            </div>
+          ))}
+          {/* Slot vide pour ajouter */}
+          {currentGallery.length < 6 && (
+            <label className="aspect-square rounded-xl border-2 border-dashed border-slate-600 hover:border-amber-500 transition-colors flex flex-col items-center justify-center cursor-pointer gap-1 text-slate-500 hover:text-amber-400">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="text-[10px] font-bold">Ajouter</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={e => handleAddGalleryImages(e.target.files)}
+              />
+            </label>
+          )}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600/80 hover:bg-amber-500 text-white text-xs font-bold rounded-xl transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Ajouter photo(s)
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => handleAddGalleryImages(e.target.files)}
+            />
+          </label>
+          <button
+            onClick={handleResetGallery}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs font-bold rounded-xl transition-all"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Réinitialiser photos originales
+          </button>
+        </div>
+        <p className="text-[10px] text-slate-500">
+          {currentGallery.length}/6 photos • Les photos sont comprimées automatiquement
+        </p>
       </div>
 
       {/* Danger zone */}
