@@ -99,38 +99,72 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
               </div>
             </div>
 
-            {/* Hero Visual — real store photo */}
-            <div className="lg:col-span-5 relative flex justify-center items-center">
-              <div className="absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-primary-100/50 blur-3xl -z-10"></div>
+            {/* Hero Visual — lié dynamiquement au produit vedette s'il existe */}
+            {(() => {
+              const featuredId = homepageSettings?.featuredProductId;
+              const featuredProduct = featuredId ? fabrics.find(f => String(f.id) === String(featuredId)) : null;
               
-              <div className="relative w-full max-w-sm aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform hover:rotate-1 transition-transform duration-500">
-                <img
-                  src={getAssetUrl(homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg')}
-                  alt={lang === 'ar' ? 'محل أقمشة وسكاي باب زير 2 تلمسان - واجهة الأقمشة' : 'Boutique Le Tissu Bab Zir 2 Tlemcen - Rouleaux de tissus'}
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Floating price card */}
-                <div className="absolute bottom-5 left-5 right-5 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-sand-100 flex justify-between items-center">
-                  <div className="text-right rtl:text-right ltr:text-left">
-                    <span className="block text-[10px] font-extrabold text-primary-600 uppercase tracking-wider">
-                      {lang === 'ar' ? 'اقمشة وسكاي تلمسان' : 'Le Tissu · Tlemcen'}
-                    </span>
-                    <span className="text-sm font-bold text-sand-900">
-                      {lang === 'ar' ? 'دراوات فيتنام ابتداءً من 350دج/م' : 'Drap Vietnam dès 350DA/m'}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleCategoryClick('drap-vietnam')}
-                    className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center shadow hover:bg-primary-700 transition-colors flex-shrink-0 ms-3"
+              const heroImgSrc = featuredProduct?.image 
+                ? featuredProduct.image 
+                : (homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg');
+
+              const handleHeroClick = () => {
+                if (featuredProduct) {
+                  handleSelectProduct(featuredProduct);
+                } else {
+                  handleCategoryClick('drap-vietnam');
+                }
+              };
+
+              return (
+                <div className="lg:col-span-5 relative flex justify-center items-center">
+                  <div className="absolute w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-primary-100/50 blur-3xl -z-10"></div>
+                  
+                  <div 
+                    onClick={handleHeroClick}
+                    className="relative w-full max-w-sm aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-4 border-white transform hover:rotate-1 transition-transform duration-500 cursor-pointer group"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </button>
+                    <img
+                      src={heroImgSrc.startsWith('data:') ? heroImgSrc : getAssetUrl(heroImgSrc)}
+                      alt={featuredProduct ? (lang === 'ar' ? featuredProduct.nameAr : featuredProduct.nameFr) : (lang === 'ar' ? 'محل أقمشة وسكاي باب زير 2 تلمسان - واجهة الأقمشة' : 'Boutique Le Tissu Bab Zir 2 Tlemcen - Rouleaux de tissus')}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                    
+                    {/* Floating price card */}
+                    <div className="absolute bottom-5 left-5 right-5 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-sand-100 flex justify-between items-center">
+                      <div className="text-right rtl:text-right ltr:text-left min-w-0 flex-1">
+                        <span className="block text-[10px] font-extrabold text-primary-600 uppercase tracking-wider">
+                          {featuredProduct 
+                            ? (lang === 'ar' ? 'المنتج المفضل حالياً' : 'Notre coup de cœur')
+                            : (lang === 'ar' ? 'اقمشة وسكاي تلمسان' : 'Le Tissu · Tlemcen')}
+                        </span>
+                        <span className="text-sm font-bold text-sand-900 block truncate">
+                          {featuredProduct 
+                            ? (lang === 'ar' ? featuredProduct.nameAr : featuredProduct.nameFr)
+                            : (lang === 'ar' ? 'دراوات فيتنام ابتداءً من 350دج/م' : 'Drap Vietnam dès 350DA/m')}
+                        </span>
+                        {featuredProduct && (
+                          <span className="text-xs font-black text-primary-600 block mt-0.5">
+                            {featuredProduct.pricePerMeter} DA/m
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleHeroClick();
+                        }}
+                        className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center shadow hover:bg-primary-700 transition-colors flex-shrink-0 ms-3"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
 
           </div>
         </div>
