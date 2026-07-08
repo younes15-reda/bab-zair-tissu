@@ -99,11 +99,17 @@ export default function Checkout({ setCurrentPage }) {
       cart.forEach((item, index) => {
         const pName = item.fabric.nameAr;
         message += `${index + 1}. ${pName} | الطول: *${item.length}م* | السعر للمتر: ${item.fabric.price}دج | المجموع: *${(item.fabric.price * item.length).toFixed(0)}دج*\n`;
-        if (item.fabric.image && !item.fabric.image.startsWith('data:')) {
-          const imgUrl = item.fabric.image.startsWith('/') 
-            ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
-            : item.fabric.image;
-          message += `📸 صورة المنتج: ${imgUrl}\n`;
+        if (item.fabric.image) {
+          if (!item.fabric.image.startsWith('data:')) {
+            // Image URL classique
+            const imgUrl = item.fabric.image.startsWith('/')
+              ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
+              : item.fabric.image;
+            message += `📸 صورة المنتج: ${imgUrl}\n`;
+          } else {
+            // Image Base64 — on met le lien vers la boutique
+            message += `🔗 رابط المتجر: https://younes15-reda.github.io/bab-zair-tissu/#boutique\n`;
+          }
         }
       });
       message += `\n💵 *الفاتورة:*\n`;
@@ -127,11 +133,17 @@ export default function Checkout({ setCurrentPage }) {
       cart.forEach((item, index) => {
         const pName = item.fabric.nameFr;
         message += `${index + 1}. ${pName} | Longueur : *${item.length}m* | Prix/m : ${item.fabric.price}DA | Ligne : *${(item.fabric.price * item.length).toFixed(0)}DA*\n`;
-        if (item.fabric.image && !item.fabric.image.startsWith('data:')) {
-          const imgUrl = item.fabric.image.startsWith('/') 
-            ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
-            : item.fabric.image;
-          message += `📸 Photo du tissu : ${imgUrl}\n`;
+        if (item.fabric.image) {
+          if (!item.fabric.image.startsWith('data:')) {
+            // Image URL classique
+            const imgUrl = item.fabric.image.startsWith('/')
+              ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
+              : item.fabric.image;
+            message += `📸 Photo du tissu : ${imgUrl}\n`;
+          } else {
+            // Image Base64 — on met le lien vers la boutique
+            message += `🔗 Voir la boutique : https://younes15-reda.github.io/bab-zair-tissu/#boutique\n`;
+          }
         }
       });
       message += `\n💵 *Récapitulatif financier :*\n`;
