@@ -153,17 +153,65 @@ export const AppProvider = ({ children }) => {
   const fabrics = fabricsData.filter(f => f.active !== false);
   const categories = fabricTypes.filter(c => c.active !== false);
 
+  // Nettoyage du localStorage : supprimer les anciens paniers avec objets fabric complets (Base64 images)
+  // qui peuvent dépasser le quota de localStorage
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('cart');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Si c'est l'ancien format (objets fabric complets avec image Base64), on nettoie
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].fabric && parsed[0].fabric.image?.startsWith('data:')) {
+          localStorage.removeItem('cart');
+        }
+      }
+    } catch (e) {
+      localStorage.removeItem('cart');
+    }
+  }, []);
+
   // Langue: default to Arabic
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem('lang');
     return saved || 'ar';
   });
 
-  // Panier
-  const [cart, setCart] = useState(() => {
+  // Panier — stocké en mémoire uniquement (pas de Base64 dans localStorage)
+  const [cart, setCart] = useState([]);
+  const [cartRehydrated, setCartRehydrated] = useState(false);
+
+  // Rehydrate le panier depuis localStorage une fois que fabricsData est disponible
+  // On stocke seulement {fabricId, length} pour éviter QuotaExceededError avec les images Base64
+  useEffect(() => {
+    if (cartRehydrated || fabricsData.length === 0) return;
     const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const restored = parsed.map(item => {
+          // Supporte l'ancien format {fabric, length} et le nouveau {fabricId, length}
+          const fabricId = item.fabricId !== undefined ? item.fabricId : item.fabric?.id;
+          const fabric = fabricsData.find(f => String(f.id) === String(fabricId));
+          return fabric ? { fabric, length: item.length } : null;
+        }).filter(Boolean);
+        setCart(restored);
+      } catch (e) {
+        localStorage.removeItem('cart');
+      }
+    }
+    setCartRehydrated(true);
+  }, [fabricsData, cartRehydrated]);
+
+  // Sauvegarde légère dans localStorage — seulement fabricId + length (pas d'images)
+  useEffect(() => {
+    if (!cartRehydrated) return;
+    const lightCart = cart.map(item => ({ fabricId: item.fabric.id, length: item.length }));
+    try {
+      localStorage.setItem('cart', JSON.stringify(lightCart));
+    } catch (e) {
+      console.warn('Impossible de sauvegarder le panier dans localStorage:', e);
+    }
+  }, [cart, cartRehydrated]);
 
   // Apply direction to HTML element on language change
   useEffect(() => {
@@ -172,11 +220,6 @@ export const AppProvider = ({ children }) => {
     document.documentElement.lang = lang;
     localStorage.setItem('lang', lang);
   }, [lang]);
-
-  // Save cart to local storage
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
 
   // Translation helper
   const t = (key) => {
