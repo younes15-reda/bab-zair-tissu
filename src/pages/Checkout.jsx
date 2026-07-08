@@ -100,16 +100,16 @@ export default function Checkout({ setCurrentPage }) {
         const pName = item.fabric.nameAr || item.fabric.nameFr || 'Produit';
         const fabricPrice = item.fabric.price || item.fabric.pricePerMeter || 0;
         message += `${index + 1}. ${pName} | الطول: *${item.length}م* | السعر للمتر: ${fabricPrice}دج | المجموع: *${(fabricPrice * item.length).toFixed(0)}دج*\n`;
-        // Lien image si disponible (URL simple uniquement, pas Base64)
+        // Lien image si URL simple (pas Base64)
         const imgField = item.fabric.image || '';
         if (imgField && !imgField.startsWith('data:') && imgField.trim() !== '') {
           const imgUrl = imgField.startsWith('/')
             ? `https://younes15-reda.github.io/bab-zair-tissu${imgField}`
             : imgField;
           message += `📸 صورة: ${imgUrl}\n`;
-        } else {
-          message += `🔗 متجرنا: https://younes15-reda.github.io/bab-zair-tissu/\n`;
         }
+        // Lien direct vers la fiche du produit
+        message += `🔗 ملف المنتج: https://younes15-reda.github.io/bab-zair-tissu/?product=${item.fabric.id}\n`;
       });
       message += `\n💵 *الفاتورة:*\n`;
       message += `• السعر الإجمالي للأقمشة: ${getSubtotal().toFixed(0)} دج\n`;
@@ -133,16 +133,16 @@ export default function Checkout({ setCurrentPage }) {
         const pName = item.fabric.nameFr || item.fabric.nameAr || 'Produit';
         const fabricPrice = item.fabric.price || item.fabric.pricePerMeter || 0;
         message += `${index + 1}. ${pName} | Longueur : *${item.length}m* | Prix/m : ${fabricPrice}DA | Ligne : *${(fabricPrice * item.length).toFixed(0)}DA*\n`;
-        // Lien image si disponible (URL simple uniquement, pas Base64)
+        // Lien image si URL simple (pas Base64)
         const imgField = item.fabric.image || '';
         if (imgField && !imgField.startsWith('data:') && imgField.trim() !== '') {
           const imgUrl = imgField.startsWith('/')
             ? `https://younes15-reda.github.io/bab-zair-tissu${imgField}`
             : imgField;
           message += `📸 Photo : ${imgUrl}\n`;
-        } else {
-          message += `🔗 Notre boutique : https://younes15-reda.github.io/bab-zair-tissu/\n`;
         }
+        // Lien direct vers la fiche du produit
+        message += `🔗 Fiche produit : https://younes15-reda.github.io/bab-zair-tissu/?product=${item.fabric.id}\n`;
       });
       message += `\n💵 *Récapitulatif financier :*\n`;
       message += `• Sous-total : ${getSubtotal().toFixed(0)} DA\n`;

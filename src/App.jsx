@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider } from './context/AdminContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -31,6 +31,23 @@ function MainApp() {
       setCurrentPage('admin-login');
     }
   }, [currentPage, isAdminLoggedIn]);
+
+  // Détecter le paramètre ?product=ID dans l'URL au chargement
+  // Cela permet aux liens WhatsApp de pointer directement vers un produit
+  const { fabrics } = useApp();
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('product');
+    if (productId && fabrics && fabrics.length > 0) {
+      const found = fabrics.find(f => String(f.id) === String(productId));
+      if (found) {
+        setSelectedProduct(found);
+        setCurrentPage('product-detail');
+        // Nettoyer l'URL sans recharger la page
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, [fabrics]);
 
   // Défilement automatique vers le haut au changement de page
   React.useEffect(() => {
