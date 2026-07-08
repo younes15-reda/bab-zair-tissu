@@ -99,6 +99,12 @@ export default function Checkout({ setCurrentPage }) {
       cart.forEach((item, index) => {
         const pName = item.fabric.nameAr;
         message += `${index + 1}. ${pName} | الطول: *${item.length}م* | السعر للمتر: ${item.fabric.price}دج | المجموع: *${(item.fabric.price * item.length).toFixed(0)}دج*\n`;
+        if (item.fabric.image && !item.fabric.image.startsWith('data:')) {
+          const imgUrl = item.fabric.image.startsWith('/') 
+            ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
+            : item.fabric.image;
+          message += `📸 صورة المنتج: ${imgUrl}\n`;
+        }
       });
       message += `\n💵 *الفاتورة:*\n`;
       message += `• السعر الإجمالي للأقمشة: ${getSubtotal().toFixed(0)} دج\n`;
@@ -121,6 +127,12 @@ export default function Checkout({ setCurrentPage }) {
       cart.forEach((item, index) => {
         const pName = item.fabric.nameFr;
         message += `${index + 1}. ${pName} | Longueur : *${item.length}m* | Prix/m : ${item.fabric.price}DA | Ligne : *${(item.fabric.price * item.length).toFixed(0)}DA*\n`;
+        if (item.fabric.image && !item.fabric.image.startsWith('data:')) {
+          const imgUrl = item.fabric.image.startsWith('/') 
+            ? `https://younes15-reda.github.io/bab-zair-tissu${item.fabric.image}`
+            : item.fabric.image;
+          message += `📸 Photo du tissu : ${imgUrl}\n`;
+        }
       });
       message += `\n💵 *Récapitulatif financier :*\n`;
       message += `• Sous-total : ${getSubtotal().toFixed(0)} DA\n`;
