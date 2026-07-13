@@ -71,7 +71,24 @@ function AdminSettings() {
   const currentGallery = homepageSettings?.galleryImages || [];
 
   const handleSelectFeatured = async (productId) => {
-    await updateHomepageSettings({ featuredProductId: productId });
+    const selectedProd = activeProducts.find(f => String(f.id) === String(productId));
+    if (selectedProd) {
+      await updateHomepageSettings({
+        featuredProductId: productId,
+        featuredProductImage: selectedProd.image || '',
+        featuredProductNameFr: selectedProd.nameFr || '',
+        featuredProductNameAr: selectedProd.nameAr || '',
+        featuredProductPrice: selectedProd.price || selectedProd.pricePerMeter || 0
+      });
+    } else {
+      await updateHomepageSettings({
+        featuredProductId: '',
+        featuredProductImage: '',
+        featuredProductNameFr: '',
+        featuredProductNameAr: '',
+        featuredProductPrice: 0
+      });
+    }
     showMsg('✅ Produit vedette mis à jour.');
   };
 

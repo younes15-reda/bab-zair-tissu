@@ -102,15 +102,33 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
             {/* Hero Visual — lié dynamiquement au produit vedette s'il existe */}
             {(() => {
               const featuredId = homepageSettings?.featuredProductId;
+              // Recherche si le tissu complet est déjà chargé
               const featuredProduct = featuredId ? fabrics.find(f => String(f.id) === String(featuredId)) : null;
               
+              // Si le produit complet est chargé, on l'utilise. Sinon, on se rabat sur les infos statiques enregistrées dans homepageSettings
               const heroImgSrc = featuredProduct?.image 
                 ? featuredProduct.image 
-                : (homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg');
+                : (homepageSettings?.featuredProductImage || homepageSettings?.heroImage || '/photo_9_2026-07-03_20-52-45.jpg');
+
+              const displayTitle = featuredProduct 
+                ? (lang === 'ar' ? featuredProduct.nameAr : featuredProduct.nameFr)
+                : (lang === 'ar' 
+                  ? (homepageSettings?.featuredProductNameAr || 'دراوات فيتنام ابتداءً من 350دج/م') 
+                  : (homepageSettings?.featuredProductNameFr || 'Drap Vietnam dès 350DA/m'));
+
+              const displayPrice = featuredProduct 
+                ? (featuredProduct.price || featuredProduct.pricePerMeter)
+                : homepageSettings?.featuredProductPrice;
+
+              const isFeatured = !!featuredProduct || !!homepageSettings?.featuredProductNameFr;
 
               const handleHeroClick = () => {
                 if (featuredProduct) {
                   handleSelectProduct(featuredProduct);
+                } else if (featuredId) {
+                  // Si le produit existe dans la base locale mais n'est pas encore trouvé (chargement)
+                  const localFound = fabrics.find(f => String(f.id) === String(featuredId));
+                  if (localFound) handleSelectProduct(localFound);
                 } else {
                   handleCategoryClick('drap-vietnam');
                 }
@@ -126,7 +144,7 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
                   >
                     <img
                       src={heroImgSrc.startsWith('data:') ? heroImgSrc : getAssetUrl(heroImgSrc)}
-                      alt={featuredProduct ? (lang === 'ar' ? featuredProduct.nameAr : featuredProduct.nameFr) : (lang === 'ar' ? 'محل أقمشة وسكاي باب زير 2 تلمسان - واجهة الأقمشة' : 'Boutique Le Tissu Bab Zir 2 Tlemcen - Rouleaux de tissus')}
+                      alt={lang === 'ar' ? 'محل أقمشة وسكاي باب زير 2 تلمسان - واجهة الأقمشة' : 'Boutique Le Tissu Bab Zir 2 Tlemcen - Rouleaux de tissus'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                     />
                     
@@ -134,18 +152,16 @@ export default function Home({ setCurrentPage, setSelectedProduct, setShopFilter
                     <div className="absolute bottom-5 left-5 right-5 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-sand-100 flex justify-between items-center">
                       <div className="text-right rtl:text-right ltr:text-left min-w-0 flex-1">
                         <span className="block text-[10px] font-extrabold text-primary-600 uppercase tracking-wider">
-                          {featuredProduct 
+                          {isFeatured 
                             ? (lang === 'ar' ? 'المنتج المفضل حالياً' : 'Notre coup de cœur')
                             : (lang === 'ar' ? 'اقمشة وسكاي تلمسان' : 'Le Tissu · Tlemcen')}
                         </span>
                         <span className="text-sm font-bold text-sand-900 block truncate">
-                          {featuredProduct 
-                            ? (lang === 'ar' ? featuredProduct.nameAr : featuredProduct.nameFr)
-                            : (lang === 'ar' ? 'دراوات فيتنام ابتداءً من 350دج/م' : 'Drap Vietnam dès 350DA/m')}
+                          {displayTitle}
                         </span>
-                        {featuredProduct && (
+                        {displayPrice && (
                           <span className="text-xs font-black text-primary-600 block mt-0.5">
-                            {featuredProduct.pricePerMeter} DA/m
+                            {displayPrice} DA/m
                           </span>
                         )}
                       </div>

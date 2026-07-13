@@ -160,9 +160,12 @@ export const AppProvider = ({ children }) => {
       const saved = localStorage.getItem('cart');
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Si c'est l'ancien format (objets fabric complets avec image Base64), on nettoie
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].fabric && parsed[0].fabric.image?.startsWith('data:')) {
-          localStorage.removeItem('cart');
+        // Si c'est l'ancien format (contient l'objet complet "fabric" ou une image Base64), on nettoie tout de suite
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasOldFormat = parsed.some(item => item.fabric !== undefined || item.fabric?.image?.startsWith('data:'));
+          if (hasOldFormat) {
+            localStorage.removeItem('cart');
+          }
         }
       }
     } catch (e) {
