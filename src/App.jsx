@@ -39,11 +39,11 @@ function MainApp() {
     const params = new URLSearchParams(window.location.search);
     const productId = params.get('product');
     if (productId && fabrics && fabrics.length > 0) {
-      const found = fabrics.find(f => String(f.id) === String(productId));
+      const found = fabrics.find(f => String(f.id).trim() === String(productId).trim());
       if (found) {
         setSelectedProduct(found);
         setCurrentPage('product-detail');
-        // Nettoyer l'URL sans recharger la page
+        // Nettoyer l'URL sans recharger la page uniquement si le produit est trouvé
         window.history.replaceState({}, '', window.location.pathname);
       }
     }
