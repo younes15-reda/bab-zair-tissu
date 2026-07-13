@@ -8,9 +8,8 @@ const MOTIF_LABELS = {
   'adult': 'Adulte (الكبار)',
 };
 
-// ─── Compression d'image automatique ─────────────────────────────────────────
-// Redimensionne et compresse l'image côté client pour rester sous 200KB en Base64
-const compressImage = (file, maxWidth = 800, quality = 0.72) => {
+// Redimensionne et compresse l'image côté client pour rester sous 70KB en Base64
+const compressImage = (file, maxWidth = 480, quality = 0.52) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

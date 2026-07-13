@@ -3,7 +3,7 @@
 // Si non configuré, le site bascule en mode localStorage (fallback)
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -24,8 +24,13 @@ let db = null;
 if (FIREBASE_ENABLED) {
   try {
     const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    console.log('✅ Firebase Firestore connecté.');
+    // Initialise Firestore avec un cache local persistant pour un chargement instantané (offline-first)
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+    console.log('✅ Firebase Firestore connecté avec cache local persistant.');
   } catch (e) {
     console.warn('⚠️ Firebase non disponible, mode localStorage activé.', e);
   }

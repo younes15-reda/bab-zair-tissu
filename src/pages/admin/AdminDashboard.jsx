@@ -12,7 +12,7 @@ const TABS = [
 ];
 
 // ─── Compression d'image d'accueil ──────────────────────────────────────────
-const compressImage = (file, maxWidth = 600, quality = 0.6) => {
+const compressImage = (file, maxWidth = 480, quality = 0.48) => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -105,7 +105,7 @@ function AdminSettings() {
     const compressed = [];
     for (const file of toProcess) {
       try {
-        const b64 = await compressImage(file, 500, 0.55);
+        const b64 = await compressImage(file, 450, 0.46);
         compressed.push(b64);
       } catch (e) {
         console.error('Compression err:', e);
