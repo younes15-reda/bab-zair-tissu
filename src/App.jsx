@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AdminProvider } from './context/AdminContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { useAdmin } from './context/AdminContext';
+import LoadingScreen from './components/LoadingScreen';
 
 // Pages
 import Home from './pages/Home';
@@ -20,10 +21,24 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import WhatsAppFloat from './components/WhatsAppFloat';
 
 function MainApp() {
-  const { isAdminLoggedIn } = useAdmin();
+  const { isAdminLoggedIn, isDataReady } = useAdmin();
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [shopFilter, setShopFilter] = useState('all');
+  // Contrôle du fade-out du loader
+  const [showLoader, setShowLoader] = useState(true);
+  const [loaderVisible, setLoaderVisible] = useState(true);
+
+  // Dès que les données sont prêtes, démarrer le fade-out du loader
+  useEffect(() => {
+    if (isDataReady) {
+      // Petit délai pour laisser le site se rendre avant de cacher le loader
+      setTimeout(() => {
+        setLoaderVisible(false); // Démarrer le fade-out
+        setTimeout(() => setShowLoader(false), 500); // Supprimer complètement après l'animation
+      }, 300);
+    }
+  }, [isDataReady]);
 
   // Sécurité et redirection Admin
   React.useEffect(() => {
@@ -117,7 +132,7 @@ function MainApp() {
     }
   };
 
-  // Admin pages get full-screen layout (no Navbar/Footer)
+  // Admin pages : pas de loader ni de Navbar/Footer
   const isAdminPage = currentPage === 'admin' || currentPage === 'admin-login';
 
   if (isAdminPage) {
@@ -125,21 +140,38 @@ function MainApp() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Header Navigation */}
-      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+    <>
+      {/* Loader affiché pendant le chargement Firestore avec transition de disparition */}
+      {showLoader && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          opacity: loaderVisible ? 1 : 0,
+          transition: 'opacity 0.5s ease',
+          pointerEvents: loaderVisible ? 'all' : 'none',
+        }}>
+          <LoadingScreen />
+        </div>
+      )}
 
-      {/* Main body content */}
-      <main className="flex-grow">
-        {renderPage()}
-      </main>
+      {/* Site principal (toujours rendu en dessous pour précharger) */}
+      <div className="flex flex-col min-h-screen" style={{ opacity: loaderVisible ? 0 : 1, transition: 'opacity 0.4s ease' }}>
+        {/* Header Navigation */}
+        <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
-      {/* Footer */}
-      <Footer setCurrentPage={setCurrentPage} />
+        {/* Main body content */}
+        <main className="flex-grow">
+          {renderPage()}
+        </main>
 
-      {/* Floating WhatsApp Service Button */}
-      <WhatsAppFloat />
-    </div>
+        {/* Footer */}
+        <Footer setCurrentPage={setCurrentPage} />
+
+        {/* Floating WhatsApp Service Button */}
+        <WhatsAppFloat />
+      </div>
+    </>
   );
 }
 

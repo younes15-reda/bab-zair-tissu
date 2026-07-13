@@ -43,6 +43,10 @@ export const AdminProvider = ({ children }) => {
   // ── Orders ────────────────────────────────────────────────────────────────
   const [orders, setOrders] = useState(() => lsGet('orders', []));
 
+  // ── Data Ready Flag ───────────────────────────────────────────────────────
+  // true dès que le premier snapshot Firestore est reçu (ou immédiatement si Firebase désactivé)
+  const [isDataReady, setIsDataReady] = useState(!FIREBASE_ENABLED);
+
   // ── Homepage Settings ─────────────────────────────────────────────────────
   const [homepageSettings, setHomepageSettings] = useState(() =>
     lsGet('homepage_settings', { 
@@ -88,6 +92,8 @@ export const AdminProvider = ({ children }) => {
         const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
         setFabricsData(data);
         lsSet('fabrics_data', data);
+        // Marquer les données comme prêtes dès le premier snapshot reçu
+        setIsDataReady(true);
       }
     );
 
@@ -325,6 +331,8 @@ export const AdminProvider = ({ children }) => {
       translateStatus,
       // Homepage Settings
       homepageSettings, updateHomepageSettings,
+      // Data Ready
+      isDataReady,
     }}>
       {children}
     </AdminContext.Provider>
