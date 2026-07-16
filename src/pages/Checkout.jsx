@@ -154,9 +154,12 @@ export default function Checkout({ setCurrentPage }) {
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${sellerWhatsAppNumber}?text=${encodedMessage}`;
 
-    // Simulate order placement, clear cart and redirect
+    // URL de CallMeBot Telegram pour @Wassimof13
+    const telegramBotUrl = `https://api.callmebot.com/text.php?user=@Wassimof13&text=${encodedMessage}`;
+
+    // Simulate order placement, clear cart and send Telegram request
     setTimeout(async () => {
-      // ── Save order to localStorage for admin dashboard ──
+      // ── Save order to localStorage/Firestore for admin dashboard ──
       const order = {
         id: `CMD-${Date.now()}`,
         date: new Date().toISOString(),
@@ -181,11 +184,19 @@ export default function Checkout({ setCurrentPage }) {
         console.error("Erreur d'enregistrement de commande:", err);
       }
 
+      // Envoi automatique de la commande sur Telegram en arrière-plan
+      try {
+        // Utilisation du mode 'no-cors' pour éviter les blocages de sécurité CORS du navigateur
+        await fetch(telegramBotUrl, { mode: 'no-cors' });
+        console.log("Commande envoyée automatiquement sur Telegram !");
+      } catch (tgErr) {
+        console.error("Erreur d'envoi automatique sur Telegram:", tgErr);
+      }
+
       setLoading(false);
       setIsSuccess(true);
       setGeneratedWhatsAppLink(whatsappUrl);
       clearCart();
-      window.open(whatsappUrl, '_blank');
     }, 1500);
   };
 
@@ -214,11 +225,11 @@ export default function Checkout({ setCurrentPage }) {
             <svg fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
               <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.731-1.456L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.859-4.42 9.863-9.864.002-2.637-1.03-5.115-2.906-6.99C16.549 1.876 14.077.844 11.44.844c-5.441 0-9.866 4.422-9.87 9.866-.001 1.702.46 3.361 1.336 4.815l-.993 3.63 3.713-.974zm11.004-6.837c-.305-.153-1.805-.89-2.083-.99-.278-.102-.48-.153-.68.152-.2.304-.775.99-.95 1.19-.175.203-.35.228-.655.076-.305-.153-1.287-.475-2.45-1.514-.906-.809-1.517-1.809-1.695-2.114-.177-.305-.019-.47.133-.621.137-.136.305-.355.457-.533.153-.178.203-.304.305-.507.102-.203.05-.38-.026-.533-.075-.153-.68-1.639-.93-2.247-.244-.588-.492-.51-.68-.52-.176-.009-.379-.01-.582-.01-.202 0-.531.076-.81.38-.28.304-1.062 1.039-1.062 2.535s1.088 2.944 1.24 3.147c.152.203 2.14 3.267 5.185 4.577.724.312 1.29.499 1.732.639.728.231 1.39.198 1.914.12.584-.087 1.805-.737 2.058-1.45.253-.713.253-1.32.177-1.447-.076-.127-.278-.203-.583-.356z"/>
             </svg>
-            <span>{t('whatsappBtn')}</span>
+            <span>{lang === 'ar' ? 'أرسل نسخة عبر واتساب' : 'Envoyer une copie par WhatsApp'}</span>
           </a>
           <button
             onClick={() => setCurrentPage('shop')}
-            className="px-8 py-4 bg-white border border-sand-300 hover:border-primary-400 text-sand-800 hover:text-primary-600 font-extrabold text-sm rounded-xl transition-all"
+            className="px-8 py-4 bg-white border border-sand-300 hover:border-primary-400 text-sand-800 hover:text-primary-600 font-extrabold text-sm rounded-xl transition-all flex items-center justify-center gap-2"
           >
             {t('backToShop')}
           </button>
@@ -475,14 +486,14 @@ export default function Checkout({ setCurrentPage }) {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>{t('whatsappRedirecting')}</span>
+                <span>{lang === 'ar' ? 'جاري إرسال الطلب تلقائياً...' : 'Envoi automatique en cours...'}</span>
               </span>
             ) : (
               <>
-                <svg fill="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.731-1.456L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.859-4.42 9.863-9.864.002-2.637-1.03-5.115-2.906-6.99C16.549 1.876 14.077.844 11.44.844c-5.441 0-9.866 4.422-9.87 9.866-.001 1.702.46 3.361 1.336 4.815l-.993 3.63 3.713-.974zm11.004-6.837c-.305-.153-1.805-.89-2.083-.99-.278-.102-.48-.153-.68.152-.2.304-.775.99-.95 1.19-.175.203-.35.228-.655.076-.305-.153-1.287-.475-2.45-1.514-.906-.809-1.517-1.809-1.695-2.114-.177-.305-.019-.47.133-.621.137-.136.305-.355.457-.533.153-.178.203-.304.305-.507.102-.203.05-.38-.026-.533-.075-.153-.68-1.639-.93-2.247-.244-.588-.492-.51-.68-.52-.176-.009-.379-.01-.582-.01-.202 0-.531.076-.81.38-.28.304-1.062 1.039-1.062 2.535s1.088 2.944 1.24 3.147c.152.203 2.14 3.267 5.185 4.577.724.312 1.29.499 1.732.639.728.231 1.39.198 1.914.12.584-.087 1.805-.737 2.058-1.45.253-.713.253-1.32.177-1.447-.076-.127-.278-.203-.583-.356z"/>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>{t('placeOrder')}</span>
+                <span>{lang === 'ar' ? 'تأكيد وإرسال الطلبية' : 'Confirmer et envoyer la commande'}</span>
               </>
             )}
           </button>
