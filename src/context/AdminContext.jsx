@@ -98,16 +98,6 @@ export const AdminProvider = ({ children }) => {
       }
     );
 
-    // Écouter les commandes en temps réel
-    const unsubOrders = onSnapshot(
-      query(collection(db, COL_ORDERS), orderBy('date', 'desc')),
-      snap => {
-        const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-        setOrders(data);
-        lsSet('orders', data);
-      }
-    );
-
     // Écouter les configurations de l'accueil
     const unsubHomepage = onSnapshot(doc(db, COL_SETTINGS, 'homepage'), snap => {
       if (snap.exists()) {
@@ -121,10 +111,30 @@ export const AdminProvider = ({ children }) => {
       unsubAuth();
       unsubTypes();
       unsubFabrics();
-      unsubOrders();
       unsubHomepage();
     };
   }, []);
+
+  // Écouter les commandes en temps réel UNIQUEMENT si l'administrateur est connecté
+  useEffect(() => {
+    if (!FIREBASE_ENABLED || !db || !isAdminLoggedIn) {
+      return;
+    }
+
+    const unsubOrders = onSnapshot(
+      query(collection(db, COL_ORDERS), orderBy('date', 'desc')),
+      snap => {
+        const data = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+        setOrders(data);
+        lsSet('orders', data);
+      },
+      err => {
+        console.error("Erreur d'écoute des commandes (Permissions) :", err);
+      }
+    );
+
+    return () => unsubOrders();
+  }, [isAdminLoggedIn]);
 
   // ── Persist localStorage (fallback si Firebase désactivé) ────────────────
   useEffect(() => { if (!FIREBASE_ENABLED) lsSet('fabric_types', fabricTypes); }, [fabricTypes]);
