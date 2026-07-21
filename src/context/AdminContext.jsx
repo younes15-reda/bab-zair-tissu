@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { categories as defaultCategories, fabrics as defaultFabrics } from '../data/fabrics';
-import { db, FIREBASE_ENABLED } from '../firebase';
+import { db, FIREBASE_ENABLED, onAuthChange } from '../firebase';
 import {
   collection, doc, getDocs, setDoc, deleteDoc,
   onSnapshot, orderBy, query, serverTimestamp
