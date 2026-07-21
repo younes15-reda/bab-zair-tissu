@@ -323,7 +323,7 @@ export const AdminProvider = ({ children }) => {
   return (
     <AdminContext.Provider value={{
       // Auth
-      isAdminLoggedIn, login, logout, changePassword, adminPassword,
+      isAdminLoggedIn, login, logout, changePassword,
       // Fabric Types
       fabricTypes, addFabricType, updateFabricType, deleteFabricType, reorderFabricTypes,
       // Fabrics
