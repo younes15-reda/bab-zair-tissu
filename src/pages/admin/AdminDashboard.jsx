@@ -37,25 +37,33 @@ const compressImage = (file, maxWidth = 480, quality = 0.48) => {
 
 // ─── Settings Tab ─────────────────────────────────────────────────────────────────────────────────
 function AdminSettings() {
-  const { adminPassword, changePassword, logout, orders, homepageSettings, updateHomepageSettings, fabricsData } = useAdmin();
-  const [oldPass, setOldPass] = useState('');
+  const { changePassword, logout, orders, homepageSettings, updateHomepageSettings, fabricsData } = useAdmin();
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [msg, setMsg] = useState({ text: '', type: '' });
   const [galleryMsg, setGalleryMsg] = useState('');
+  const [loadingPass, setLoadingPass] = useState(false);
 
   const showMsg = (text, type = 'success') => {
     setMsg({ text, type });
     setTimeout(() => setMsg({ text: '', type: '' }), 4000);
   };
 
-  const handleChangePass = () => {
-    if (oldPass !== adminPassword) { showMsg('Ancien mot de passe incorrect.', 'error'); return; }
+  const handleChangePass = async () => {
     if (newPass.length < 6) { showMsg('Le nouveau mot de passe doit avoir au moins 6 caractères.', 'error'); return; }
     if (newPass !== confirmPass) { showMsg('Les mots de passe ne correspondent pas.', 'error'); return; }
-    changePassword(newPass);
-    setOldPass(''); setNewPass(''); setConfirmPass('');
-    showMsg('✅ Mot de passe modifié avec succès.');
+    
+    setLoadingPass(true);
+    try {
+      await changePassword(newPass);
+      setNewPass(''); setConfirmPass('');
+      showMsg('✅ Mot de passe modifié avec succès.');
+    } catch (err) {
+      console.error(err);
+      showMsg(err.message || 'Erreur lors du changement de mot de passe.', 'error');
+    } finally {
+      setLoadingPass(false);
+    }
   };
 
   const totalRevenue = orders
@@ -159,23 +167,27 @@ function AdminSettings() {
       {/* Change password */}
       <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5 space-y-4">
         <h3 className="text-white font-bold">Changer le mot de passe admin</h3>
-        {['Ancien mot de passe', 'Nouveau mot de passe', 'Confirmer le nouveau'].map((label, i) => {
-          const vals = [oldPass, newPass, confirmPass];
-          const setters = [setOldPass, setNewPass, setConfirmPass];
-          return (
-            <div key={i} className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400">{label}</label>
-              <input type="password" value={vals[i]} onChange={e => setters[i](e.target.value)}
-                className="admin-input w-full" placeholder="••••••••" />
-            </div>
-          );
-        })}
+        
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-400">Nouveau mot de passe</label>
+          <input type="password" value={newPass} onChange={e => setNewPass(e.target.value)}
+            className="admin-input w-full" placeholder="••••••••" />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-400">Confirmer le nouveau mot de passe</label>
+          <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+            className="admin-input w-full" placeholder="••••••••" />
+        </div>
+
         {msg.text && (
           <p className={`text-xs font-bold ${msg.type === 'error' ? 'text-red-400' : 'text-emerald-400'}`}>{msg.text}</p>
         )}
-        <button onClick={handleChangePass}
-          className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-xl transition-colors text-sm">
-          Modifier le mot de passe
+        <button 
+          onClick={handleChangePass}
+          disabled={loadingPass || !newPass || !confirmPass}
+          className="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-black rounded-xl transition-colors text-sm">
+          {loadingPass ? 'Modification en cours...' : 'Modifier le mot de passe'}
         </button>
       </div>
 

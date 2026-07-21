@@ -4,6 +4,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,6 +21,7 @@ export const FIREBASE_ENABLED = Boolean(
 );
 
 let db = null;
+let auth = null;
 
 if (FIREBASE_ENABLED) {
   try {
@@ -30,7 +32,8 @@ if (FIREBASE_ENABLED) {
         tabManager: persistentMultipleTabManager()
       })
     });
-    console.log('✅ Firebase Firestore connecté avec cache local persistant.');
+    auth = getAuth(app);
+    console.log('✅ Firebase Firestore & Auth connectés.');
   } catch (e) {
     console.warn('⚠️ Firebase non disponible, mode localStorage activé.', e);
   }
@@ -38,4 +41,47 @@ if (FIREBASE_ENABLED) {
   console.info('ℹ️ Variables Firebase non configurées — mode localStorage activé.');
 }
 
-export { db };
+// ─── Fonctions Sessions Firebase Auth ───────────────────────────────────────
+
+export const loginAdmin = async (email, password) => {
+  if (!FIREBASE_ENABLED || !auth) {
+    // Mode local (fallback) - simulation basique
+    if (email === 'akmichawskaybabzir@gmail.com' && password === localStorage.getItem('local_admin_password')) {
+      return { user: { email } };
+    }
+    throw new Error('Identifiants incorrects');
+  }
+  return signInWithEmailAndPassword(auth, email, password);
+};
+
+export const logoutAdmin = async () => {
+  if (!FIREBASE_ENABLED || !auth) return;
+  return signOut(auth);
+};
+
+export const onAuthChange = (callback) => {
+  if (!FIREBASE_ENABLED || !auth) {
+    // Mode local simulation
+    const checkState = () => {
+      const logged = localStorage.getItem('local_admin_logged') === 'true';
+      callback(logged ? { email: 'akmichawskaybabzir@gmail.com' } : null);
+    };
+    window.addEventListener('storage', checkState);
+    checkState();
+    return () => window.removeEventListener('storage', checkState);
+  }
+  return onAuthStateChanged(auth, callback);
+};
+
+export const changeAdminPassword = async (newPassword) => {
+  if (!FIREBASE_ENABLED || !auth) {
+    localStorage.setItem('local_admin_password', newPassword);
+    return;
+  }
+  const user = auth.currentUser;
+  if (!user) throw new Error('Aucun utilisateur connecté');
+  return updatePassword(user, newPassword);
+};
+
+export { db, auth };
+

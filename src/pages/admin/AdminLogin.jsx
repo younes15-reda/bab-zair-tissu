@@ -3,24 +3,30 @@ import { useAdmin } from '../../context/AdminContext';
 
 export default function AdminLogin({ onLoginSuccess }) {
   const { login } = useAdmin();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!email.trim() || !password) return;
     setLoading(true);
     setError('');
-    setTimeout(() => {
-      const ok = login(password);
+    try {
+      const ok = await login(email.trim(), password);
       if (ok) {
         onLoginSuccess();
       } else {
-        setError('Mot de passe incorrect. Réessayez.');
+        setError('Adresse email ou mot de passe incorrect.');
         setLoading(false);
       }
-    }, 600);
+    } catch (err) {
+      console.error(err);
+      setError('Erreur de connexion : Vérifiez vos identifiants.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -46,6 +52,24 @@ export default function AdminLogin({ onLoginSuccess }) {
         {/* Card */}
         <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
           <form onSubmit={handleSubmit} className="space-y-5">
+            
+            {/* Email Address Input */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Adresse email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => { setEmail(e.target.value); setError(''); }}
+                placeholder="exemple@email.com"
+                className={`w-full px-4 py-3.5 bg-slate-900/50 border rounded-xl text-white placeholder-slate-600 text-base focus:outline-none focus:ring-2 transition-all ${
+                  error ? 'border-red-500 focus:ring-red-500/30' : 'border-slate-600 focus:ring-amber-500/30 focus:border-amber-500/50'
+                }`}
+              />
+            </div>
+
+            {/* Password Input */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                 Mot de passe admin
@@ -56,7 +80,6 @@ export default function AdminLogin({ onLoginSuccess }) {
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(''); }}
                   placeholder="••••••••"
-                  autoFocus
                   className={`w-full px-4 py-3.5 pr-12 bg-slate-900/50 border rounded-xl text-white placeholder-slate-600 font-mono text-base focus:outline-none focus:ring-2 transition-all ${
                     error ? 'border-red-500 focus:ring-red-500/30' : 'border-slate-600 focus:ring-amber-500/30 focus:border-amber-500/50'
                   }`}
@@ -90,7 +113,7 @@ export default function AdminLogin({ onLoginSuccess }) {
 
             <button
               type="submit"
-              disabled={loading || !password}
+              disabled={loading || !email || !password}
               className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed text-white font-extrabold rounded-xl shadow-lg shadow-orange-500/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2"
             >
               {loading ? (
@@ -120,3 +143,4 @@ export default function AdminLogin({ onLoginSuccess }) {
     </div>
   );
 }
+

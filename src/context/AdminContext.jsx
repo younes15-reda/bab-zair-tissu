@@ -21,14 +21,8 @@ const lsSet  = (key, val)      => { try { localStorage.setItem(key, JSON.stringi
 export const AdminProvider = ({ children }) => {
 
   // ── Session ──────────────────────────────────────────────────────────────
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() =>
-    sessionStorage.getItem('admin_session') === 'true'
-  );
-
-  // ── Password ──────────────────────────────────────────────────────────────
-  const [adminPassword, setAdminPassword] = useState(() =>
-    localStorage.getItem('admin_password') || 'admin2024'
-  );
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminEmail, setAdminEmail] = useState(null);
 
   // ── Fabric Types / Categories ─────────────────────────────────────────────
   const [fabricTypes, setFabricTypes] = useState(() =>
@@ -65,15 +59,22 @@ export const AdminProvider = ({ children }) => {
 
   // ── Firebase: chargement temps réel ─────────────────────────────────────
   useEffect(() => {
-    if (!FIREBASE_ENABLED || !db) return;
-
-    // Charger le mot de passe admin depuis Firestore
-    const unsubSettings = onSnapshot(doc(db, COL_SETTINGS, 'admin'), snap => {
-      if (snap.exists()) {
-        const pwd = snap.data()?.password;
-        if (pwd) { setAdminPassword(pwd); localStorage.setItem('admin_password', pwd); }
+    // Écouter le statut d'authentification Firebase Auth
+    const unsubAuth = onAuthChange((user) => {
+      if (user) {
+        setIsAdminLoggedIn(true);
+        setAdminEmail(user.email);
+      } else {
+        setIsAdminLoggedIn(false);
+        setAdminEmail(null);
       }
     });
+
+    if (!FIREBASE_ENABLED || !db) {
+      // Mode offline local : marquer prêt immédiatement
+      setIsDataReady(true);
+      return unsubAuth;
+    }
 
     // Écouter les catégories en temps réel
     const unsubTypes = onSnapshot(
@@ -117,7 +118,7 @@ export const AdminProvider = ({ children }) => {
     });
 
     return () => {
-      unsubSettings();
+      unsubAuth();
       unsubTypes();
       unsubFabrics();
       unsubOrders();
@@ -132,26 +133,27 @@ export const AdminProvider = ({ children }) => {
   useEffect(() => { if (!FIREBASE_ENABLED) lsSet('homepage_settings', homepageSettings); }, [homepageSettings]);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
-  const login = (password) => {
-    if (password === adminPassword) {
-      sessionStorage.setItem('admin_session', 'true');
+  const login = async (email, password) => {
+    const { loginAdmin } = await import('../firebase');
+    const result = await loginAdmin(email, password);
+    if (result && result.user) {
       setIsAdminLoggedIn(true);
+      setAdminEmail(result.user.email);
       return true;
     }
     return false;
   };
 
-  const logout = () => {
-    sessionStorage.removeItem('admin_session');
+  const logout = async () => {
+    const { logoutAdmin } = await import('../firebase');
+    await logoutAdmin();
     setIsAdminLoggedIn(false);
+    setAdminEmail(null);
   };
 
   const changePassword = async (newPassword) => {
-    localStorage.setItem('admin_password', newPassword);
-    setAdminPassword(newPassword);
-    if (FIREBASE_ENABLED && db) {
-      await setDoc(doc(db, COL_SETTINGS, 'admin'), { password: newPassword }, { merge: true });
-    }
+    const { changeAdminPassword } = await import('../firebase');
+    await changeAdminPassword(newPassword);
   };
 
   const updateHomepageSettings = async (updates) => {
